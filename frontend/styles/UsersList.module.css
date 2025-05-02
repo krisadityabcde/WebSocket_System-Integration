@@ -1,0 +1,39 @@
+.usersContainer {
+  background-color: #212121;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.usersHeader {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  color: white;
+}
+
+.usersList {
+  list-style: none;
+  padding: 0;
+}
+
+.userItem {
+  padding: 0.5rem;
+  border-bottom: 1px solid #303030;
+  display: flex;
+  align-items: center;
+}
+
+.userItem:last-child {
+  border-bottom: none;
+}
+
+.hostUser {
+  color: gold;
+  font-weight: bold;
+}
+
+.noUsers {
+  color: #aaa;
+  text-align: center;
+  padding: 0.5rem 0;
+}
