@@ -355,6 +355,33 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Import modul yang diperlukan jika belum ada
+const next = require('next');
+const dev = process.env.NODE_ENV !== 'production';
+const nextApp = next({ dev, dir: path.join(__dirname, '../frontend') });
+const nextHandler = nextApp.getRequestHandler();
+
+// Tambahkan kode ini SEBELUM pendefinisian route API lainnya
+if (process.env.NODE_ENV === 'production') {
+  // Untuk Next.js, kita perlu melakukan dua hal:
+  
+  // 1. Serve file statis dari direktori frontend/.next
+  app.use('/_next', express.static(path.join(__dirname, '../frontend/.next/_next')));
+  app.use('/static', express.static(path.join(__dirname, '../frontend/.next/static')));
+  
+  // 2. Setup handler untuk Next.js route menggunakan next-handler
+  
+  // Persiapkan aplikasi Next.js
+  nextApp.prepare().then(() => {
+    console.log('Next.js app is ready');
+    
+    // Tangani semua request yang tidak ditangani oleh rute API
+    app.all('*', (req, res) => {
+      return nextHandler(req, res);
+    });
+  });
+}
+
 // Start the server
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
