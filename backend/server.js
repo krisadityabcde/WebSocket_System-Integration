@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -342,6 +343,17 @@ io.on('connection', (socket) => {
 app.get('/', (req, res) => {
   res.send('YouTube Sync Party Backend is running');
 });
+
+// Di server.js, tambahkan ini untuk menyajikan frontend
+// Serve static files from Next.js build
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/.next')));
+  
+  // Handle all routes
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/.next/server/pages/index.html'));
+  });
+}
 
 // Start the server
 const PORT = process.env.PORT || 4000;
