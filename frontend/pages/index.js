@@ -8,6 +8,7 @@ import UsernameModal from '../components/UsernameModal';
 import UsersList from '../components/UsersList';
 import styles from '../styles/Home.module.css';
 import { initializeSocket } from '../lib/socket';
+import { fetchYoutubeVideoTitle } from '../lib/youtubeApi';
 
 export default function Home() {
   const [socket, setSocket] = useState(null);
@@ -209,19 +210,10 @@ export default function Home() {
     }
   };
 
-  // Function to fetch video title from YouTube API (note: would need API key)
-  const fetchVideoTitle = (id) => {
-    const fallbackTitle = `Video ${id}`;
-    setCurrentVideoTitle(fallbackTitle);
-    
-    // In a real implementation, we would fetch from YouTube API:
-    // fetch(`https://www.googleapis.com/youtube/v3/videos?id=${id}&key=YOUR_API_KEY&part=snippet`)
-    // .then(res => res.json())
-    // .then(data => {
-    //   if (data.items && data.items[0]) {
-    //     setCurrentVideoTitle(data.items[0].snippet.title);
-    //   }
-    // })
+  // Function to fetch video title from YouTube API
+  const fetchVideoTitle = async (id) => {
+    const title = await fetchYoutubeVideoTitle(id);
+    setCurrentVideoTitle(title);
   };
 
   // Update video title when video changes
@@ -241,6 +233,16 @@ export default function Home() {
 
   const handlePlayNext = () => {
     socket?.emit('playNextInQueue');
+  };
+
+  // Add this handler function
+  const handleRemoveFromQueue = (index) => {
+    socket?.emit('removeFromQueue', index);
+  };
+
+  // Add this handler function
+  const handleReorderQueue = (oldIndex, newIndex) => {
+    socket?.emit('reorderQueue', { oldIndex, newIndex });
   };
 
   if (!isConnected) {
@@ -355,6 +357,8 @@ export default function Home() {
           <VideoQueue 
             queue={queue} 
             onAddToQueue={handleAddToQueue}
+            onRemoveFromQueue={handleRemoveFromQueue}
+            onReorderQueue={handleReorderQueue}
             currentVideo={currentVideo}
           />
         </div>

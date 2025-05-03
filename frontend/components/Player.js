@@ -7,6 +7,7 @@ const Player = ({ socket, videoId, isHost }) => {
   const [isControlledUpdate, setIsControlledUpdate] = useState(false);
   const lastSyncTimeRef = useRef(0);
   const syncInProgressRef = useRef(false);
+  const [seekThrottleTimer, setSeekThrottleTimer] = useState(null);
   
   useEffect(() => {
     // Initialize YouTube player when component mounts
@@ -198,25 +199,24 @@ const Player = ({ socket, videoId, isHost }) => {
 
     // Set up sync interval based on host status
     const syncInterval = setInterval(() => {
-      // Only the host regularly broadcasts their state
-      if (isHost && playerReady && playerRef.current) {
-        const currentTime = playerRef.current.getCurrentTime();
+      if (playerRef.current && playerReady) {
         const playerState = playerRef.current.getPlayerState();
+        const currentTime = playerRef.current.getCurrentTime();
         
-        // YT.PlayerState.PLAYING = 1
-        if (playerState === 1) {
+        // Host sends sync info every 500ms when playing, less frequently when paused
+        if (isHost && playerState === 1 && (Date.now() - lastSyncTimeRef.current > 500)) {
           console.log('Host syncing play state at time:', currentTime);
           socket.emit('videoPlay', currentTime);
           lastSyncTimeRef.current = Date.now();
         } 
         // Only emit pause state once to avoid spamming
-        else if (playerState === 2 && (Date.now() - lastSyncTimeRef.current > 5000)) {
+        else if (playerState === 2 && (Date.now() - lastSyncTimeRef.current > 1000)) {
           console.log('Host syncing pause state at time:', currentTime);
           socket.emit('videoPause', currentTime);
           lastSyncTimeRef.current = Date.now();
         }
       }
-    }, isHost ? 5000 : 10000); // Host syncs more frequently than clients
+    }, isHost ? 200 : 1000); // Host syncs much more frequently, clients check less often
 
     // Request initial sync
     socket.emit('requestSync');
@@ -266,6 +266,22 @@ const Player = ({ socket, videoId, isHost }) => {
     } else if (event.data === 0) { // Ended
       console.log('Video ended, requesting next in queue');
       socket.emit('playNextInQueue');
+    }
+    
+    // When seeking, throttle the seek events
+    if (event.data === 3) { // 3 is YT.PlayerState.BUFFERING which often indicates seeking
+      // Clear any pending seek events
+      if (seekThrottleTimer) clearTimeout(seekThrottleTimer);
+      
+      // Set a new timer that will fire after the user has stopped seeking
+      const timer = setTimeout(() => {
+        if (playerRef.current && isHost) {
+          const currentTime = playerRef.current.getCurrentTime();
+          socket.emit('videoSeek', currentTime);
+        }
+      }, 250); // Wait 250ms to see if the user continues seeking
+      
+      setSeekThrottleTimer(timer);
     }
   }
 

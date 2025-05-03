@@ -23,14 +23,19 @@
 .queueItem {
   display: flex;
   gap: 0.5rem;
-  cursor: pointer;
+  cursor: grab;
   padding: 0.5rem;
   border-bottom: 1px solid var(--border-color);
+  align-items: center;
 }
 
 .queueItem:hover {
   background-color: #303030;
   border-radius: var(--border-radius);
+}
+
+.queueItem:active {
+  cursor: grabbing;
 }
 
 .emptyQueue {
@@ -132,4 +137,29 @@
     width: 120px;
     height: 68px;
   }
+}
+
+/* Add these new styles */
+.removeButton {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.removeButton:hover {
+  color: #ff6b6b;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dragging {
+  background-color: #404040;
+  opacity: 0.8;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }

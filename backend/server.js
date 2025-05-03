@@ -35,6 +35,10 @@ const connectedUsers = new Map(); // socketId -> {username, isHost}
 // Track the current host
 let hostId = null;
 
+// Add this near the beginning of the file, after your other variables
+let lastBroadcastTime = Date.now();
+const SYNC_DEBOUNCE_TIME = 100; // Minimum time between broadcasts in milliseconds
+
 // Handle socket connections
 io.on('connection', (socket) => {
   // First user becomes the host
@@ -55,18 +59,17 @@ io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   console.log(`Total connected users: ${connectedUsers.size}, Host: ${hostId}`);
   
-  // Send current state to new user with a small delay to ensure player is ready
+  // Send current state to new user immediately
+  socket.emit('initState', {
+    ...currentState,
+    hostId: hostId,
+    isHost: socket.id === hostId
+  });
+  
+  // Then send a refined sync after a short delay to ensure player is ready
   setTimeout(() => {
-    socket.emit('initState', {
-      ...currentState,
-      hostId: hostId,
-      isHost: socket.id === hostId
-    });
-    socket.emit('updateQueue', videoQueue);
-    
-    // Broadcast updated user list
-    broadcastUserList();
-  }, 1000);
+    socket.emit('syncState', currentState);
+  }, 200);
   
   // Handle username setting
   socket.on('setUsername', (username) => {
@@ -96,13 +99,17 @@ io.on('connection', (socket) => {
     currentState.currentTime = time;
     currentState.lastUpdate = Date.now();
     
-    // If sender is host or there's no host, broadcast to everyone
+    // If sender is host or there's no host, broadcast to everyone with debounce
     if (socket.id === hostId || !hostId) {
-      io.emit('videoPlay', {
-        time: time,
-        timestamp: Date.now(),
-        fromHost: socket.id === hostId
-      });
+      // Only broadcast if sufficient time has passed since the last broadcast
+      if (Date.now() - lastBroadcastTime > SYNC_DEBOUNCE_TIME) {
+        io.emit('videoPlay', {
+          time: time,
+          timestamp: Date.now(),
+          fromHost: socket.id === hostId
+        });
+        lastBroadcastTime = Date.now();
+      }
     } else {
       // If sender is not host, only respond to sender
       socket.emit('syncFromHost', currentState);
@@ -120,11 +127,13 @@ io.on('connection', (socket) => {
     
     // If sender is host or there's no host, broadcast to everyone
     if (socket.id === hostId || !hostId) {
+      // Always broadcast pause events as they're important and infrequent
       io.emit('videoPause', {
         time: time,
         timestamp: Date.now(),
         fromHost: socket.id === hostId
       });
+      lastBroadcastTime = Date.now();
     } else {
       // If sender is not host, only respond to sender with correct state
       socket.emit('syncFromHost', currentState);
@@ -140,19 +149,21 @@ io.on('connection', (socket) => {
       currentState.currentTime = time;
       currentState.lastUpdate = Date.now();
       
+      // Always broadcast seek events immediately as they're critical for synchronization
       io.emit('videoSeek', {
         time: time,
         timestamp: Date.now(),
         fromHost: socket.id === hostId
       });
+      lastBroadcastTime = Date.now();
     } else {
-      // If sender is not host, allow temporary seeking but then sync back
+      // If sender is not host, allow temporary seeking but then sync back more quickly
       socket.emit('temporarySeek', time);
       
-      // After a delay, force sync back to host's position
+      // Sync back more quickly (2 seconds instead of 5)
       setTimeout(() => {
         socket.emit('syncFromHost', currentState);
-      }, 5000); // Allow 5 seconds of freedom before syncing back
+      }, 2000);
     }
   });
   
@@ -238,6 +249,34 @@ io.on('connection', (socket) => {
       hostId: hostId,
       isHost: socket.id === hostId
     });
+  });
+  
+  // Add this new socket event handler in the connection section
+  socket.on('removeFromQueue', (index) => {
+    const username = connectedUsers.get(socket.id)?.username || 'Someone';
+    console.log(`Video removed from queue at position ${index} by ${username}`);
+    
+    if (index >= 0 && index < videoQueue.length) {
+      videoQueue.splice(index, 1);
+      io.emit('updateQueue', videoQueue);
+    }
+  });
+  
+  // Add this new socket event handler in the connection section
+  socket.on('reorderQueue', ({ oldIndex, newIndex }) => {
+    const username = connectedUsers.get(socket.id)?.username || 'Someone';
+    console.log(`Queue reordered by ${username}: moving item from position ${oldIndex} to ${newIndex}`);
+    
+    if (oldIndex >= 0 && oldIndex < videoQueue.length && newIndex >= 0 && newIndex < videoQueue.length) {
+      // Remove the item from the old position and save it
+      const [movedItem] = videoQueue.splice(oldIndex, 1);
+      
+      // Insert the item at the new position
+      videoQueue.splice(newIndex, 0, movedItem);
+      
+      // Broadcast updated queue to all clients
+      io.emit('updateQueue', videoQueue);
+    }
   });
   
   // Handle disconnection
