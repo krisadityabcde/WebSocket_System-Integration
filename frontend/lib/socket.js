@@ -4,7 +4,7 @@ let socket = null;
 let socketPromise = null;
 
 // Backend URL - use environment variable if available
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://nxzn6xt7-4000.asse.devtunnels.ms/';
 
 export const initializeSocket = async () => {
   if (socketPromise) return socketPromise;
