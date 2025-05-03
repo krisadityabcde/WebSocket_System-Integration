@@ -25,6 +25,7 @@ export default function Home() {
   const [username, setUsername] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [hostId, setHostId] = useState(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -134,6 +135,10 @@ export default function Home() {
               setHostId(state.hostId);
             }
           };
+
+          const onVideoPlayState = (isPlaying) => {
+            setIsVideoPlaying(isPlaying);
+          };
           
           // Remove existing listeners before adding new ones
           socketInstance.off('connect', onConnect);
@@ -146,6 +151,7 @@ export default function Home() {
           socketInstance.off('changeVideo', onChangeVideo);
           socketInstance.off('userCount', onUserCount);
           socketInstance.off('initState', onInitState);
+          socketInstance.off('videoPlayState', onVideoPlayState);
           
           // Add event listeners
           socketInstance.on('connect', onConnect);
@@ -158,6 +164,7 @@ export default function Home() {
           socketInstance.on('changeVideo', onChangeVideo);
           socketInstance.on('userCount', onUserCount);
           socketInstance.on('initState', onInitState);
+          socketInstance.on('videoPlayState', onVideoPlayState);
           
           // Setup periodic connection check
           const debugInterval = setInterval(() => {
@@ -184,6 +191,7 @@ export default function Home() {
             socketInstance.off('changeVideo', onChangeVideo);
             socketInstance.off('userCount', onUserCount);
             socketInstance.off('initState', onInitState);
+            socketInstance.off('videoPlayState', onVideoPlayState);
           };
         }
       } catch (error) {
@@ -199,7 +207,7 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [connectionAttempts, isConnected]);
+  }, [connectionAttempts, isConnected, socket]);
 
   // Function to handle username submission
   const handleUsernameSubmit = (name) => {

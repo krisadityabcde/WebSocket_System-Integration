@@ -260,11 +260,14 @@ const Player = ({ socket, videoId, isHost }) => {
     if (event.data === 1) { // Playing
       console.log('Emitting play event at time:', currentTime);
       socket.emit('videoPlay', currentTime);
+      socket.emit('videoPlayState', true); // Add this line
     } else if (event.data === 2) { // Paused
       console.log('Emitting pause event at time:', currentTime);
       socket.emit('videoPause', currentTime);
+      socket.emit('videoPlayState', false); // Add this line
     } else if (event.data === 0) { // Ended
       console.log('Video ended, requesting next in queue');
+      socket.emit('videoPlayState', false); // Add this line
       socket.emit('playNextInQueue');
     }
     

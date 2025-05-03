@@ -108,6 +108,7 @@ io.on('connection', (socket) => {
           timestamp: Date.now(),
           fromHost: socket.id === hostId
         });
+        io.emit('videoPlayState', true); // Add this line
         lastBroadcastTime = Date.now();
       }
     } else {
@@ -133,6 +134,7 @@ io.on('connection', (socket) => {
         timestamp: Date.now(),
         fromHost: socket.id === hostId
       });
+      io.emit('videoPlayState', false); // Add this line
       lastBroadcastTime = Date.now();
     } else {
       // If sender is not host, only respond to sender with correct state
@@ -277,6 +279,11 @@ io.on('connection', (socket) => {
       // Broadcast updated queue to all clients
       io.emit('updateQueue', videoQueue);
     }
+  });
+  
+  // Add handler for direct play state events
+  socket.on('videoPlayState', (isPlaying) => {
+    io.emit('videoPlayState', isPlaying);
   });
   
   // Handle disconnection

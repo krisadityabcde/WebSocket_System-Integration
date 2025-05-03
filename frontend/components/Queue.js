@@ -1,14 +1,82 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import styles from '../styles/Queue.module.css';
 import { fetchYoutubeVideoTitle } from '../lib/youtubeApi';
-import { FaTimes } from 'react-icons/fa';
+import { searchYoutubeVideos } from '../lib/youtubeSearchApi';
+import { FaTimes, FaSearch } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
-// Add onReorderQueue to props destructuring
 const VideoQueue = ({ queue = [], onAddToQueue, onRemoveFromQueue, onReorderQueue, currentVideo }) => {
   const [videoInput, setVideoInput] = useState('');
   const [titleInput, setTitleInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const searchTimeoutRef = useRef(null);
+  const searchResultsRef = useRef(null);
+
+  // Handle input change and trigger search
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setVideoInput(value);
+    
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    if (value.length > 2) {
+      setIsSearching(true);
+      searchTimeoutRef.current = setTimeout(() => {
+        searchVideos(value);
+      }, 500);
+    } else {
+      setSearchResults([]);
+      setShowResults(false);
+    }
+  };
+  
+  // Search for videos using the YouTube API
+  const searchVideos = async (query) => {
+    if (!query) return;
+    
+    try {
+      const results = await searchYoutubeVideos(query);
+      setSearchResults(results);
+      setShowResults(results.length > 0);
+      setIsSearching(false);
+    } catch (error) {
+      console.error('Error searching videos:', error);
+      setIsSearching(false);
+    }
+  };
+  
+  // Handle adding a video from search results
+  const handleAddFromSearch = (video) => {
+    onAddToQueue({
+      id: video.id,
+      title: video.title,
+      thumbnail: video.thumbnail
+    });
+    setVideoInput('');
+    setTitleInput('');
+    setSearchResults([]);
+    setShowResults(false);
+  };
+  
+  // Close search results when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (searchResultsRef.current && !searchResultsRef.current.contains(event.target)) {
+        setShowResults(false);
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleAddToQueue = async () => {
     if (!videoInput) return;
@@ -67,24 +135,56 @@ const VideoQueue = ({ queue = [], onAddToQueue, onRemoveFromQueue, onReorderQueu
       <h2 className={styles.queueHeader}>Up Next</h2>
       
       <div className={styles.addToQueue}>
-        <input
-          type="text"
-          value={videoInput}
-          onChange={(e) => setVideoInput(e.target.value)}
-          placeholder="Enter YouTube URL or ID"
-          className={styles.input}
-        />
+        <div className={styles.searchContainer}>
+          <input
+            type="text"
+            value={videoInput}
+            onChange={handleInputChange}
+            placeholder="Search YouTube or paste video URL"
+            className={styles.searchInput}
+          />
+          <FaSearch className={styles.searchIcon} />
+          
+          {/* Search results dropdown */}
+          {showResults && (
+            <div className={styles.searchResults} ref={searchResultsRef}>
+              {searchResults.map((video) => (
+                <div 
+                  key={video.id} 
+                  className={styles.searchResultItem}
+                  onClick={() => handleAddFromSearch(video)}
+                >
+                  <img 
+                    src={video.thumbnail} 
+                    alt={video.title}
+                    className={styles.searchResultThumbnail} 
+                  />
+                  <div className={styles.searchResultInfo}>
+                    <div className={styles.searchResultTitle}>{video.title}</div>
+                    <div className={styles.searchResultChannel}>{video.channelTitle}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {isSearching && (
+            <div className={styles.searchingIndicator}>Searching...</div>
+          )}
+        </div>
+        
         <input
           type="text"
           value={titleInput}
           onChange={(e) => setTitleInput(e.target.value)}
-          placeholder="Video title (optional)"
-          className={styles.input}
+          placeholder="Custom title (optional)"
+          className={styles.titleInput}
         />
+        
         <button 
-          onClick={handleAddToQueue}
-          className={styles.addButton}
+          onClick={handleAddToQueue} 
           disabled={isLoading}
+          className={styles.addButton}
         >
           {isLoading ? 'Adding...' : 'Add to Queue'}
         </button>

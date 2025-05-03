@@ -2,9 +2,10 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background-color: transparent;
+  background-color: #202020;
   border-radius: var(--border-radius);
-  padding: 1rem;
+  padding: 16px;
+  height: auto; /* Auto height based on content */
 }
 
 .queueHeader {
@@ -15,18 +16,26 @@
 }
 
 .queueList {
-  overflow-y: auto;
-  flex: 1;
+  width: 100%;
+  height: auto; /* Auto height based on content */
+  overflow: visible; /* Remove scrollbar */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 1rem;
 }
 
 .queueItem {
   display: flex;
-  gap: 0.5rem;
-  cursor: grab;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
   align-items: center;
+  background-color: #303030;
+  border-radius: var(--border-radius);
+  padding: 10px;
+  gap: 12px;
+  position: relative; /* Ensure proper positioning */
+  width: 100%;
+  cursor: grab;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .queueItem:hover {
@@ -77,7 +86,8 @@
 .videoList {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 10px;
+  width: 100%;
 }
 
 .thumbnailContainer {
@@ -109,16 +119,17 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding-right: 36px; /* Make space for the remove button */
+  overflow: hidden;
 }
 
 .videoTitle {
-  font-size: 0.9rem;
-  line-height: 1.2;
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .recommendedHeader {
@@ -139,27 +150,139 @@
   }
 }
 
-/* Add these new styles */
 .removeButton {
-  background: transparent;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: black;
   border: none;
-  color: #aaa;
   cursor: pointer;
-  padding: 5px;
+  padding: 0;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s;
 }
 
 .removeButton:hover {
-  color: #ff6b6b;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 0, 0, 0.2);
+  color: #ffffff;
+}
+
+.removeButton svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  color: #ff0000;
+}
+
+.removeButton:hover svg {
+  color: #ffffff;
 }
 
 .dragging {
   background-color: #404040;
   opacity: 0.8;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Add these styles to your existing Queue.module.css */
+
+.searchContainer {
+  position: relative;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.searchInput {
+  padding: 12px 40px 12px 14px; /* Increased padding (top, right, bottom, left) */
+  font-size: 16px; /* Larger font size */
+  width: 100%;
+  height: 48px; /* Taller input */
+  border-radius: var(--border-radius);
+  background-color: #303030;
+  border: 1px solid #484848;
+  color: white;
+  outline: none; /* Remove outline */
+  transition: border-color 0.2s ease;
+}
+
+.searchInput:focus {
+  border-color: var(--primary-color);
+}
+
+.searchIcon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #aaa;
+  font-size: 18px; /* Larger icon */
+}
+
+/* Make search results larger */
+.searchResults {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #222;
+  border: 1px solid #444;
+  border-radius: 4px;
+  max-height: 350px; /* Increased height */
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  margin-top: 4px;
+}
+
+.searchResultItem {
+  display: flex;
+  padding: 12px; /* Increased padding */
+  cursor: pointer;
+  border-bottom: 1px solid #333;
+}
+
+.searchResultItem:last-child {
+  border-bottom: none;
+}
+
+.searchResultThumbnail {
+  width: 140px; /* Larger thumbnail */
+  height: 78px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.searchResultInfo {
+  margin-left: 12px;
+  flex: 1;
+}
+
+.searchResultTitle {
+  font-size: 15px; /* Larger text */
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.searchResultChannel {
+  font-size: 13px;
+  color: #aaa;
+}
+
+/* Make the searching indicator more visible */
+.searchingIndicator {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #222;
+  padding: 14px;
+  text-align: center;
+  border: 1px solid #444;
+  border-radius: 4px;
+  z-index: 100;
+  margin-top: 4px;
+  font-size: 15px;
 }
