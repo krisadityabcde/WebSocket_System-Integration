@@ -4,11 +4,16 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 
+// Create express app and server
 const app = express();
 const server = http.createServer(app);
 
 // Set up CORS
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:3000", "https://youtube-sync-party.vercel.app"],
+  methods: ["GET", "POST"],
+  credentials: true
+}));
 
 // Create Socket.io server with CORS configuration
 const io = new Server(server, {
@@ -340,50 +345,21 @@ io.on('connection', (socket) => {
 });
 
 // Basic health check route
-app.get('/', (req, res) => {
-  res.send('YouTube Sync Party Backend is running');
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    connections: connectedUsers.size,
+    host: hostId ? 'assigned' : 'none'
+  });
 });
 
-// Di server.js, tambahkan ini untuk menyajikan frontend
-// Serve static files from Next.js build
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/.next')));
-  
-  // Handle all routes
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/.next/server/pages/index.html'));
+// Only start the server if we're not in a Vercel serverless environment
+if (process.env.VERCEL !== '1') {
+  const PORT = process.env.PORT || 4000;
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
-// Import modul yang diperlukan jika belum ada
-const next = require('next');
-const dev = process.env.NODE_ENV !== 'production';
-const nextApp = next({ dev, dir: path.join(__dirname, '../frontend') });
-const nextHandler = nextApp.getRequestHandler();
-
-// Tambahkan kode ini SEBELUM pendefinisian route API lainnya
-if (process.env.NODE_ENV === 'production') {
-  // Untuk Next.js, kita perlu melakukan dua hal:
-  
-  // 1. Serve file statis dari direktori frontend/.next
-  app.use('/_next', express.static(path.join(__dirname, '../frontend/.next/_next')));
-  app.use('/static', express.static(path.join(__dirname, '../frontend/.next/static')));
-  
-  // 2. Setup handler untuk Next.js route menggunakan next-handler
-  
-  // Persiapkan aplikasi Next.js
-  nextApp.prepare().then(() => {
-    console.log('Next.js app is ready');
-    
-    // Tangani semua request yang tidak ditangani oleh rute API
-    app.all('*', (req, res) => {
-      return nextHandler(req, res);
-    });
-  });
-}
-
-// Start the server
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Export the server for Vercel
+module.exports = server;
