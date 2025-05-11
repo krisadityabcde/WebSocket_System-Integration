@@ -13,7 +13,7 @@ app.use(cors());
 // Create Socket.io server with CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "https://youtube-sync-party.vercel.app"],
+    origin: ["http://localhost:3000"],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -64,12 +64,16 @@ io.on('connection', (socket) => {
   socket.emit('initState', {
     ...currentState,
     hostId: hostId,
-    isHost: socket.id === hostId
+    isHost: socket.id === hostId,
+    queue: videoQueue  // Tambahkan queue ke initial state
   });
   
   // Then send a refined sync after a short delay to ensure player is ready
   setTimeout(() => {
-    socket.emit('syncState', currentState);
+    socket.emit('syncState', {
+      ...currentState,
+      queue: videoQueue  // Tambahkan queue ke sync state
+    });
   }, 200);
   
   // Handle username setting
@@ -250,7 +254,8 @@ io.on('connection', (socket) => {
     socket.emit('syncState', {
       ...currentState,
       hostId: hostId,
-      isHost: socket.id === hostId
+      isHost: socket.id === hostId,
+      queue: videoQueue  // Tambahkan queue ke sync response
     });
   });
   

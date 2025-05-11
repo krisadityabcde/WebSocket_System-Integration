@@ -133,6 +133,23 @@ export default function Home() {
               setCurrentVideo(state.videoId);
               setIsHost(state.isHost);
               setHostId(state.hostId);
+              
+              // Tambahkan pemrosesan queue
+              if (state.queue && Array.isArray(state.queue)) {
+                setQueue(state.queue);
+              }
+            }
+          };
+
+          const onSyncState = (state) => {
+            // Jika ini adalah listener baru yang perlu ditambahkan
+            if (isMounted) {
+              // Proses state lainnya...
+              
+              // Tambahkan pemrosesan queue
+              if (state.queue && Array.isArray(state.queue)) {
+                setQueue(state.queue);
+              }
             }
           };
 
@@ -152,6 +169,7 @@ export default function Home() {
           socketInstance.off('userCount', onUserCount);
           socketInstance.off('initState', onInitState);
           socketInstance.off('videoPlayState', onVideoPlayState);
+          socketInstance.off('syncState', onSyncState);
           
           // Add event listeners
           socketInstance.on('connect', onConnect);
@@ -165,6 +183,7 @@ export default function Home() {
           socketInstance.on('userCount', onUserCount);
           socketInstance.on('initState', onInitState);
           socketInstance.on('videoPlayState', onVideoPlayState);
+          socketInstance.on('syncState', onSyncState);
           
           // Setup periodic connection check
           const debugInterval = setInterval(() => {
@@ -192,6 +211,7 @@ export default function Home() {
             socketInstance.off('userCount', onUserCount);
             socketInstance.off('initState', onInitState);
             socketInstance.off('videoPlayState', onVideoPlayState);
+            socketInstance.off('syncState', onSyncState);
           };
         }
       } catch (error) {
@@ -277,7 +297,7 @@ export default function Home() {
   return (
     <Layout>
       <Head>
-        <title>{currentVideoTitle} - YouTube Sync Party</title>
+        <title>YouTube Sync Party</title>
         <meta name="description" content="Watch YouTube videos together in sync" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
