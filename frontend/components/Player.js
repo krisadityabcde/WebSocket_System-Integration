@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import styles from '../styles/Player.module.css';
 
-const Player = ({ socket, videoId, isHost }) => {
+const Player = ({ socket, videoId, isAdmin }) => {
   const playerRef = useRef(null);
   const [playerReady, setPlayerReady] = useState(false);
   const [isControlledUpdate, setIsControlledUpdate] = useState(false);
   const lastSyncTimeRef = useRef(0);
   const syncInProgressRef = useRef(false);
   const [seekThrottleTimer, setSeekThrottleTimer] = useState(null);
+  const [connectionQuality, setConnectionQuality] = useState('good'); // good, fair, poor
+  const [lastPingTime, setLastPingTime] = useState(null);
+  const [adminInitiatedPlayback, setAdminInitiatedPlayback] = useState(false);
+  const [waitingForAdmin, setWaitingForAdmin] = useState(true);
   
   useEffect(() => {
     // Initialize YouTube player when component mounts
@@ -32,10 +36,11 @@ const Player = ({ socket, videoId, isHost }) => {
         playerVars: {
           'playsinline': 1,
           'autoplay': 0,
+          // Enable controls for all users
           'controls': 1,
           'rel': 0,
-          'fs': 1, // Enables fullscreen button
-          'modestbranding': 1 // Hides YouTube logo
+          'fs': 1,
+          'modestbranding': 1
         },
         events: {
           'onReady': onPlayerReady,
@@ -59,6 +64,52 @@ const Player = ({ socket, videoId, isHost }) => {
     }
   }, [videoId, playerReady]);
 
+  // Set up heartbeat ping to measure connection quality
+  useEffect(() => {
+    if (!socket || !playerReady) return;
+    
+    let pingInterval;
+    
+    // Set up ping to check connection quality every 10 seconds
+    pingInterval = setInterval(() => {
+      const start = Date.now();
+      setLastPingTime(start);
+      
+      socket.emit('ping');
+      
+      // If we don't get a response in 5 seconds, mark connection as poor
+      const timeout = setTimeout(() => {
+        setConnectionQuality('poor');
+      }, 5000);
+      
+      // Listen for pong response
+      const handlePong = () => {
+        clearTimeout(timeout);
+        const latency = Date.now() - start;
+        
+        // Update connection quality based on latency
+        if (latency < 150) {
+          setConnectionQuality('good');
+        } else if (latency < 500) {
+          setConnectionQuality('fair');
+        } else {
+          setConnectionQuality('poor');
+        }
+      };
+      
+      socket.once('pong', handlePong);
+      
+      return () => {
+        socket.off('pong', handlePong);
+        clearTimeout(timeout);
+      };
+    }, 10000);
+    
+    return () => {
+      clearInterval(pingInterval);
+    };
+  }, [socket, playerReady]);
+
   // Set up socket event listeners
   useEffect(() => {
     if (!socket || !playerReady) return;
@@ -66,22 +117,29 @@ const Player = ({ socket, videoId, isHost }) => {
     // Enhanced sync handling
     socket.on('initState', (state) => {
       console.log('Received initial state:', state);
+      setAdminInitiatedPlayback(state.adminInitiatedPlayback || false);
       handleStateUpdate(state);
     });
     
     // Handle sync state with improved timing
     socket.on('syncState', (state) => {
       console.log('Received sync state:', state);
+      setAdminInitiatedPlayback(state.adminInitiatedPlayback || false);
       handleStateUpdate(state);
     });
     
-    // Handle sync from host (for non-host users)
-    socket.on('syncFromHost', (state) => {
-      console.log('Forced sync from host:', state);
-      handleStateUpdate(state);
+    // Rename to syncFromAdmin
+    socket.on('syncFromAdmin', (state) => {
+      console.log('Forced sync from admin:', state);
+      setAdminInitiatedPlayback(state.adminInitiatedPlayback || false);
+      
+      // Always handle the state update, even if it's mid-playback
+      if (state.forceSync || !isAdmin) {
+        handleStateUpdate(state);
+      }
     });
     
-    // Handle temporary seek (for non-host users)
+    // Handle temporary seek (for non-admin users)
     socket.on('temporarySeek', (time) => {
       console.log('Temporary seek allowed to:', time);
       setIsControlledUpdate(true);
@@ -89,15 +147,21 @@ const Player = ({ socket, videoId, isHost }) => {
       setTimeout(() => setIsControlledUpdate(false), 500);
     });
 
-    // Handle become host event
+    // Handle become host/admin event
     socket.on('becomeHost', (status) => {
       console.log('You are now the host!');
-      // No need to do anything here, parent component will update isHost prop
     });
     
     // Improved play event handling
     socket.on('videoPlay', (data) => {
       console.log('Received play command at time:', data.time);
+      
+      // Update adminInitiatedPlayback flag
+      if (data.fromAdmin) {
+        setAdminInitiatedPlayback(true);
+        setWaitingForAdmin(false);
+      }
+      
       syncInProgressRef.current = true;
       setIsControlledUpdate(true);
       
@@ -108,11 +172,24 @@ const Player = ({ socket, videoId, isHost }) => {
       const currentTime = playerRef.current.getCurrentTime();
       
       // Only seek if time difference is significant
-      if (Math.abs(currentTime - adjustedTime) > 2) {
+      if (Math.abs(currentTime - adjustedTime) > 1) {
         playerRef.current.seekTo(adjustedTime, true);
       }
       
-      playerRef.current.playVideo();
+      // Explicitly play the video for ALL users, regardless of who sent the command
+      // Add an immediate play attempt
+      const playPromise = playerRef.current.playVideo();
+      
+      // Handle any errors from the play attempt (browsers might block autoplay)
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Play was prevented:', error);
+          // If play was prevented, try again with user interaction simulation
+          setTimeout(() => {
+            playerRef.current.playVideo();
+          }, 100);
+        });
+      }
       
       // Reset control flags after a short delay
       setTimeout(() => {
@@ -197,43 +274,43 @@ const Player = ({ socket, videoId, isHost }) => {
       }, 1000);
     }
 
-    // Set up sync interval based on host status
+    // Set up sync interval based on admin status only
     const syncInterval = setInterval(() => {
       if (playerRef.current && playerReady) {
         const playerState = playerRef.current.getPlayerState();
         const currentTime = playerRef.current.getCurrentTime();
         
-        // Host sends sync info every 500ms when playing, less frequently when paused
-        if (isHost && playerState === 1 && (Date.now() - lastSyncTimeRef.current > 500)) {
-          console.log('Host syncing play state at time:', currentTime);
+        // Only admin sends sync info
+        if (isAdmin && playerState === 1 && (Date.now() - lastSyncTimeRef.current > 500)) {
+          console.log('Admin syncing play state at time:', currentTime);
           socket.emit('videoPlay', currentTime);
           lastSyncTimeRef.current = Date.now();
         } 
         // Only emit pause state once to avoid spamming
-        else if (playerState === 2 && (Date.now() - lastSyncTimeRef.current > 1000)) {
-          console.log('Host syncing pause state at time:', currentTime);
+        else if (isAdmin && playerState === 2 && (Date.now() - lastSyncTimeRef.current > 1000)) {
+          console.log('Admin syncing pause state at time:', currentTime);
           socket.emit('videoPause', currentTime);
           lastSyncTimeRef.current = Date.now();
         }
       }
-    }, isHost ? 200 : 1000); // Host syncs much more frequently, clients check less often
+    }, isAdmin ? 200 : 1000);
 
     // Request initial sync
     socket.emit('requestSync');
 
     return () => {
+      // Cleanup event listeners
       socket.off('initState');
       socket.off('syncState');
-      socket.off('syncFromHost');
+      socket.off('syncFromAdmin');
       socket.off('temporarySeek');
-      socket.off('becomeHost');
       socket.off('videoPlay');
       socket.off('videoPause');
       socket.off('videoSeek');
       socket.off('changeVideo');
       clearInterval(syncInterval);
     };
-  }, [socket, playerReady, videoId, isHost]);
+  }, [socket, playerReady, videoId, isAdmin]);
 
   function onPlayerReady(event) {
     console.log('Player ready');
@@ -256,35 +333,64 @@ const Player = ({ socket, videoId, isHost }) => {
     const currentTime = playerRef.current.getCurrentTime();
     lastSyncTimeRef.current = Date.now();
     
-    // YT.PlayerState enum values: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
-    if (event.data === 1) { // Playing
-      console.log('Emitting play event at time:', currentTime);
-      socket.emit('videoPlay', currentTime);
-      socket.emit('videoPlayState', true); // Add this line
-    } else if (event.data === 2) { // Paused
-      console.log('Emitting pause event at time:', currentTime);
-      socket.emit('videoPause', currentTime);
-      socket.emit('videoPlayState', false); // Add this line
-    } else if (event.data === 0) { // Ended
-      console.log('Video ended, requesting next in queue');
-      socket.emit('videoPlayState', false); // Add this line
-      socket.emit('playNextInQueue');
-    }
-    
-    // When seeking, throttle the seek events
-    if (event.data === 3) { // 3 is YT.PlayerState.BUFFERING which often indicates seeking
-      // Clear any pending seek events
-      if (seekThrottleTimer) clearTimeout(seekThrottleTimer);
+    // Only allow admin to control playback for all users
+    if (isAdmin) {
+      if (event.data === 1) { // Playing
+        console.log('Emitting play event at time:', currentTime);
+        socket.emit('videoPlay', currentTime);
+        socket.emit('videoPlayState', true);
+      } else if (event.data === 2) { // Paused
+        console.log('Emitting pause event at time:', currentTime);
+        socket.emit('videoPause', currentTime);
+        socket.emit('videoPlayState', false);
+      } else if (event.data === 0) { // Ended
+        console.log('Video ended, requesting next in queue');
+        socket.emit('videoPlayState', false);
+        socket.emit('playNextInQueue');
+      }
       
-      // Set a new timer that will fire after the user has stopped seeking
-      const timer = setTimeout(() => {
-        if (playerRef.current && isHost) {
-          const currentTime = playerRef.current.getCurrentTime();
-          socket.emit('videoSeek', currentTime);
-        }
-      }, 250); // Wait 250ms to see if the user continues seeking
+      // When seeking, throttle the seek events
+      if (event.data === 3) {
+        if (seekThrottleTimer) clearTimeout(seekThrottleTimer);
+        
+        const timer = setTimeout(() => {
+          if (playerRef.current) {
+            const currentTime = playerRef.current.getCurrentTime();
+            socket.emit('videoSeek', currentTime);
+          }
+        }, 250);
+        
+        setSeekThrottleTimer(timer);
+      }
+    } else {
+      // For non-admin users, only allow play if admin has started playback before
+      if (event.data === 1 && !adminInitiatedPlayback) { // Trying to play
+        console.log('Cannot play until admin starts playback');
+        // Immediately pause the video
+        playerRef.current.pauseVideo();
+        setWaitingForAdmin(true);
+      } else if (event.data === 1 && adminInitiatedPlayback) {
+        // Allow regular playback if admin has initiated before
+        socket.emit('videoPlay', currentTime);
+      } else if (event.data === 2) { // Paused
+        socket.emit('videoPause', currentTime);
+      } else if (event.data === 0) { // Ended
+        socket.emit('videoPlayState', false);
+      }
       
-      setSeekThrottleTimer(timer);
+      // Non-admin users can send temporary seek requests
+      // but the server might sync them back
+      if (event.data === 3) {
+        if (seekThrottleTimer) clearTimeout(seekThrottleTimer);
+        
+        const timer = setTimeout(() => {
+          if (playerRef.current) {
+            socket.emit('temporarySeek', playerRef.current.getCurrentTime());
+          }
+        }, 250);
+        
+        setSeekThrottleTimer(timer);
+      }
     }
   }
 
@@ -292,9 +398,21 @@ const Player = ({ socket, videoId, isHost }) => {
     <div className={styles.playerContainer}>
       <div id="youtube-player" className={styles.player}></div>
       <div className={styles.playerOverlay}>
-        <div className={styles.syncIndicator}>
-          {syncInProgressRef.current ? '🔄 Syncing...' : isHost ? '👑 Host' : '✓ In sync'}
+        <div className={`${styles.syncIndicator} ${styles[connectionQuality]}`}>
+          {syncInProgressRef.current ? '🔄 Syncing...' : 
+            isAdmin ? '👑 Admin' : 
+            `✓ In sync (${connectionQuality})`}
         </div>
+        
+        {/* Only show waiting overlay when needed, remove the non-admin message */}
+        {!isAdmin && !adminInitiatedPlayback && (
+          <div className={styles.waitingOverlay}>
+            <div className={styles.waitingMessage}>
+              <div className={styles.waitingIcon}>⏳</div>
+              Waiting for admin to start playback
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

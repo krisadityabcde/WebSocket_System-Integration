@@ -5,7 +5,7 @@ import { searchYoutubeVideos } from '../lib/youtubeSearchApi';
 import { FaTimes, FaSearch } from 'react-icons/fa';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
-const VideoQueue = ({ queue = [], onAddToQueue, onRemoveFromQueue, onReorderQueue, currentVideo }) => {
+const VideoQueue = ({ queue = [], onAddToQueue, onRemoveFromQueue, onReorderQueue, currentVideo, isAdmin }) => {
   const [videoInput, setVideoInput] = useState('');
   const [titleInput, setTitleInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -134,67 +134,70 @@ const VideoQueue = ({ queue = [], onAddToQueue, onRemoveFromQueue, onReorderQueu
     <div className={styles.queueContainer}>
       <h2 className={styles.queueHeader}>Up Next</h2>
       
-      <div className={styles.addToQueue}>
-        <div className={styles.searchContainer}>
+      {/* Only show add to queue for admin users */}
+      {isAdmin && (
+        <div className={styles.addToQueue}>
+          <div className={styles.searchContainer}>
+            <input
+              type="text"
+              value={videoInput}
+              onChange={handleInputChange}
+              placeholder="Search YouTube or paste video URL"
+              className={styles.searchInput}
+            />
+            <FaSearch className={styles.searchIcon} />
+            
+            {/* Search results dropdown */}
+            {showResults && (
+              <div className={styles.searchResults} ref={searchResultsRef}>
+                {searchResults.map((video) => (
+                  <div 
+                    key={video.id} 
+                    className={styles.searchResultItem}
+                    onClick={() => handleAddFromSearch(video)}
+                  >
+                    <img 
+                      src={video.thumbnail} 
+                      alt={video.title}
+                      className={styles.searchResultThumbnail} 
+                    />
+                    <div className={styles.searchResultInfo}>
+                      <div className={styles.searchResultTitle}>{video.title}</div>
+                      <div className={styles.searchResultChannel}>{video.channelTitle}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {isSearching && (
+              <div className={styles.searchingIndicator}>Searching...</div>
+            )}
+          </div>
+          
           <input
             type="text"
-            value={videoInput}
-            onChange={handleInputChange}
-            placeholder="Search YouTube or paste video URL"
-            className={styles.searchInput}
+            value={titleInput}
+            onChange={(e) => setTitleInput(e.target.value)}
+            placeholder="Custom title (optional)"
+            className={styles.titleInput}
           />
-          <FaSearch className={styles.searchIcon} />
           
-          {/* Search results dropdown */}
-          {showResults && (
-            <div className={styles.searchResults} ref={searchResultsRef}>
-              {searchResults.map((video) => (
-                <div 
-                  key={video.id} 
-                  className={styles.searchResultItem}
-                  onClick={() => handleAddFromSearch(video)}
-                >
-                  <img 
-                    src={video.thumbnail} 
-                    alt={video.title}
-                    className={styles.searchResultThumbnail} 
-                  />
-                  <div className={styles.searchResultInfo}>
-                    <div className={styles.searchResultTitle}>{video.title}</div>
-                    <div className={styles.searchResultChannel}>{video.channelTitle}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {isSearching && (
-            <div className={styles.searchingIndicator}>Searching...</div>
-          )}
+          <button 
+            onClick={handleAddToQueue} 
+            disabled={isLoading}
+            className={styles.addButton}
+          >
+            {isLoading ? 'Adding...' : 'Add to Queue'}
+          </button>
         </div>
-        
-        <input
-          type="text"
-          value={titleInput}
-          onChange={(e) => setTitleInput(e.target.value)}
-          placeholder="Custom title (optional)"
-          className={styles.titleInput}
-        />
-        
-        <button 
-          onClick={handleAddToQueue} 
-          disabled={isLoading}
-          className={styles.addButton}
-        >
-          {isLoading ? 'Adding...' : 'Add to Queue'}
-        </button>
-      </div>
+      )}
       
       <div className={styles.queueList}>
         {queue.length === 0 ? (
           <p className={styles.emptyQueue}>Queue is empty</p>
         ) : (
-          <DragDropContext onDragEnd={handleDragEnd}>
+          <DragDropContext onDragEnd={isAdmin ? handleDragEnd : () => {}}>
             <Droppable droppableId="videoQueue">
               {(provided) => (
                 <div 
@@ -207,6 +210,7 @@ const VideoQueue = ({ queue = [], onAddToQueue, onRemoveFromQueue, onReorderQueu
                       key={`${video.id}-${index}`}
                       draggableId={`${video.id}-${index}`}
                       index={index}
+                      isDragDisabled={!isAdmin}
                     >
                       {(provided, snapshot) => (
                         <div 
@@ -225,14 +229,17 @@ const VideoQueue = ({ queue = [], onAddToQueue, onRemoveFromQueue, onReorderQueu
                           </div>
                           <div className={styles.videoInfo}>
                             <h3 className={styles.videoTitle}>{video.title || `Video ${video.id}`}</h3>
+                            {video.addedBy && <span className={styles.addedBy}>Added by: {video.addedBy}</span>}
                           </div>
-                          <button 
-                            className={styles.removeButton}
-                            onClick={() => onRemoveFromQueue(index)}
-                            aria-label="Remove video"
-                          >
-                            <FaTimes />
-                          </button>
+                          {isAdmin && (
+                            <button 
+                              className={styles.removeButton}
+                              onClick={() => onRemoveFromQueue(index)}
+                              aria-label="Remove video"
+                            >
+                              <FaTimes />
+                            </button>
+                          )}
                         </div>
                       )}
                     </Draggable>
@@ -243,38 +250,11 @@ const VideoQueue = ({ queue = [], onAddToQueue, onRemoveFromQueue, onReorderQueu
             </Droppable>
           </DragDropContext>
         )}
-        
-        <div className={styles.recommendedHeader}>
-          <h3>Recommended</h3>
-        </div>
-        
-        <div className={styles.videoList}>
-          <div className={styles.queueItem}>
-            <div className={styles.thumbnailContainer}>
-              <img 
-                src="https://img.youtube.com/vi/ZZ5LpwO-An4/mqdefault.jpg" 
-                alt="He-Man Sings"
-                className={styles.thumbnail}
-              />
-            </div>
-            <div className={styles.videoInfo}>
-              <h3 className={styles.videoTitle}>HEYYEYAAEYAAAEYAEYAA</h3>
-            </div>
-          </div>
-          <div className={styles.queueItem}>
-            <div className={styles.thumbnailContainer}>
-              <img 
-                src="https://img.youtube.com/vi/9bZkp7q19f0/mqdefault.jpg" 
-                alt="Gangnam Style"
-                className={styles.thumbnail}
-              />
-            </div>
-            <div className={styles.videoInfo}>
-              <h3 className={styles.videoTitle}>PSY - GANGNAM STYLE</h3>
-            </div>
-          </div>
-        </div>
       </div>
+      
+      {!isAdmin && queue.length > 0 && (
+        <p className={styles.adminNote}>Only the admin can modify the queue</p>
+      )}
     </div>
   );
 };

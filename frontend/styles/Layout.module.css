@@ -67,6 +67,110 @@
   min-height: calc(100vh - 56px);
 }
 
+/* Add these new enhanced auth button styles */
+
+.authButtonContainer {
+  position: relative;
+  margin-right: 15px;
+}
+
+.authButton {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(90deg, #3ea6ff 0%, #65b8ff 100%);
+  color: #0f0f0f;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.authButton:hover {
+  background: linear-gradient(90deg, #65b8ff 0%, #3ea6ff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.authButtonIcon {
+  margin-right: 8px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.accountDropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  width: 220px;
+  background-color: #282828;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  animation: dropdownFade 0.2s ease-in-out;
+}
+
+@keyframes dropdownFade {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.accountInfo {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #3a3a3a;
+  margin-bottom: 10px;
+}
+
+.dropdownUsername {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.adminBadge {
+  background-color: #ff0000;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.logoutButton {
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  width: 100%;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoutButton:hover {
+  background-color: #555;
+}
+
+/* Style for hamburger menu on mobile */
+.mobileAuthButton {
+  display: none;
+}
+
+/* Update the existing admin icon style */
+.adminIcon {
+  color: gold;
+}
+
+/* Media queries for responsive design */
 @media (max-width: 768px) {
   .logo h1 {
     font-size: 1rem;
@@ -79,4 +183,110 @@
   .createButton {
     margin-right: 1rem;
   }
+  
+  .mobileAuthButton {
+    display: flex;
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  .authButtonContainer {
+    display: none;
+  }
+  
+  .mobileSideMenu {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: 250px;
+    background-color: #212121;
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .mobileSideMenu.open {
+    transform: translateX(0);
+  }
+}
+
+/* Add these new styles for auth status */
+.checkAuthButton {
+  background-color: #333;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.checkAuthButton:hover {
+  background-color: #444;
+}
+
+.authStatusPanel {
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  margin: 10px 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { 
+    opacity: 0;
+    transform: translateY(-20px); 
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0); 
+  }
+}
+
+.authStatusHeader {
+  background-color: #2a2a2a;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+}
+
+.authStatusHeader h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 16px;
+}
+
+.closeAuthStatus {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeAuthStatus:hover {
+  color: #fff;
 }

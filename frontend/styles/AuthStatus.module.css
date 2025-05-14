@@ -1,0 +1,108 @@
+.authStatus {
+  margin: 16px 0;
+  padding: 12px;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.checkButton {
+  background: linear-gradient(90deg, #5865f2 0%, #4752c4 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.checkButton:hover {
+  background: linear-gradient(90deg, #4752c4 0%, #3c45a5 100%);
+  transform: translateY(-2px);
+}
+
+.checkButton:disabled {
+  background: #3c45a5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.checking {
+  opacity: 0.7;
+}
+
+.statusMessage {
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.statusIcon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.info {
+  background-color: #2f3136;
+  color: #dcddde;
+}
+
+.success {
+  background-color: rgba(67, 181, 129, 0.2);
+  color: #43b581;
+  border-left: 3px solid #43b581;
+}
+
+.error {
+  background-color: rgba(240, 71, 71, 0.2);
+  color: #f04747;
+  border-left: 3px solid #f04747;
+}
+
+.connectionInfo {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #b9bbbe;
+}
+
+.connected {
+  color: #43b581;
+  font-weight: bold;
+}
+
+.disconnected {
+  color: #f04747;
+  font-weight: bold;
+}
+
+.authenticated {
+  color: #43b581;
+  font-weight: bold;
+}
+
+.unauthenticated {
+  color: #f04747;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .connectionInfo {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

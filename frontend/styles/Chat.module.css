@@ -66,3 +66,86 @@
 .sendButton:hover {
   background-color: var(--primary-color-dark);
 }
+
+.pingContainer {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  background-color: #2a2a2a;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.pingButton {
+  background-color: #4a4a4a;
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 12px;
+}
+
+.pingButton:hover {
+  background-color: #5a5a5a;
+}
+
+.pingButton:disabled {
+  background-color: #333;
+  cursor: not-allowed;
+}
+
+.pingResult {
+  margin-left: 10px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.pingResult {
+  color: #aaa;
+  font-size: 14px;
+}
+
+.serverMessage {
+  background-color: rgba(255, 255, 0, 0.05);
+  border-left: 3px solid #ffcc00;
+}
+
+.serverMessage .user {
+  color: #ffcc00;
+  font-weight: bold;
+}
+
+.adminMessage {
+  background-color: rgba(255, 0, 0, 0.05);
+  border-left: 3px solid #ff4444;
+}
+
+.adminMessage .user {
+  color: #ff4444;
+  font-weight: bold;
+}
+
+/* Add these styles for the heartbeat indicator */
+
+.heartbeatIndicator {
+  font-size: 12px;
+  margin-left: 10px;
+  color: #aaa;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.3s ease;
+}
+
+.heartbeatIndicator.active {
+  color: #ff4444;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}

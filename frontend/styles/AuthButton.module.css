@@ -1,0 +1,162 @@
+.authButtonWrapper {
+  position: relative;
+}
+
+.authButton {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(90deg, #3ea6ff 0%, #65b8ff 100%);
+  color: #121212;
+  border: none;
+  border-radius: 30px;
+  padding: 8px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.authButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(90deg, #65b8ff 0%, #3ea6ff 100%);
+}
+
+.loginIcon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #ff8800;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.adminAvatar {
+  background-color: #ff0000;
+}
+
+.username {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdownArrow {
+  margin-left: 6px;
+  font-size: 10px;
+}
+
+/* Dropdown styling */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  width: 250px;
+  background-color: #282828;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  overflow: hidden;
+  animation: dropdownFade 0.2s ease;
+}
+
+@keyframes dropdownFade {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdownHeader {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.largeAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #ff8800;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-right: 12px;
+  font-size: 18px;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+.fullUsername {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.adminBadge {
+  background-color: #ff0000;
+  color: white;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  align-self: flex-start;
+}
+
+.dropdownDivider {
+  height: 1px;
+  background-color: #3a3a3a;
+  margin: 0;
+}
+
+.dropdownMenu {
+  padding: 8px;
+}
+
+.logoutButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  background-color: transparent;
+  border: none;
+  padding: 10px;
+  color: #ffffff;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  text-align: left;
+}
+
+.logoutButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.logoutIcon {
+  margin-right: 8px;
+}
+
+/* Responsive styles */
+@media (max-width: 480px) {
+  .authButton {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  
+  .avatar {
+    width: 20px;
+    height: 20px;
+  }
+}
