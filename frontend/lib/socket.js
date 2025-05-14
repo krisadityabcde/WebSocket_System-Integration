@@ -4,7 +4,7 @@ let socket = null;
 let socketPromise = null;
 
 // Backend URL - use environment variable if available
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://localhost:4000';
 
 // Export backend URL for API calls
 export const API_URL = BACKEND_URL;
@@ -50,7 +50,9 @@ export const initializeSocket = async () => {
       reconnectionDelay: 1000,
       reconnection: true,
       transports: ['websocket', 'polling'],
-      auth: { token }
+      auth: { token },
+      // Add this option for development with self-signed certificates
+      rejectUnauthorized: process.env.NODE_ENV === 'production'
     });
     
     // Add event listeners for debugging

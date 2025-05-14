@@ -12,6 +12,7 @@ const Player = ({ socket, videoId, isAdmin }) => {
   const [lastPingTime, setLastPingTime] = useState(null);
   const [adminInitiatedPlayback, setAdminInitiatedPlayback] = useState(false);
   const [waitingForAdmin, setWaitingForAdmin] = useState(true);
+  const [adminInitiatedFirstPlay, setAdminInitiatedFirstPlay] = useState(false);
   
   useEffect(() => {
     // Initialize YouTube player when component mounts
@@ -119,6 +120,10 @@ const Player = ({ socket, videoId, isAdmin }) => {
       console.log('Received initial state:', state);
       setAdminInitiatedPlayback(state.adminInitiatedPlayback || false);
       handleStateUpdate(state);
+      setAdminInitiatedFirstPlay(state.adminInitiatedFirstPlay);
+      if (!isAdmin && !state.adminInitiatedFirstPlay) {
+        setWaitingForAdmin(true);
+      }
     });
     
     // Handle sync state with improved timing
@@ -198,7 +203,7 @@ const Player = ({ socket, videoId, isAdmin }) => {
       }, 500);
     });
 
-    // Improved pause event handling
+    // Enhanced the videoPause handler
     socket.on('videoPause', (data) => {
       console.log('Received pause command at time:', data.time);
       syncInProgressRef.current = true;
@@ -207,6 +212,11 @@ const Player = ({ socket, videoId, isAdmin }) => {
       // Seek to the exact time then pause
       playerRef.current.seekTo(data.time, true);
       playerRef.current.pauseVideo();
+      
+      // If this is a forced pause due to waiting for admin, update UI accordingly
+      if (data.forcePause) {
+        setWaitingForAdmin(true);
+      }
       
       // Reset control flags after a short delay
       setTimeout(() => {
@@ -298,6 +308,34 @@ const Player = ({ socket, videoId, isAdmin }) => {
     // Request initial sync
     socket.emit('requestSync');
 
+    socket.on('forceInitialState', (data) => {
+      if (playerRef.current && playerRef.current.pauseVideo) {
+        console.log('Forcing initial state:', data);
+        setIsControlledUpdate(true);
+        
+        // Force video to beginning and pause
+        playerRef.current.seekTo(data.currentTime, true);
+        playerRef.current.pauseVideo();
+        
+        setWaitingForAdmin(true);
+        
+        setTimeout(() => {
+          setIsControlledUpdate(false);
+        }, 500);
+      }
+    });
+    
+    // Add listener for admin first play status
+    socket.on('adminInitiatedFirstPlay', (status) => {
+      console.log('Admin initiated first play:', status);
+      setAdminInitiatedFirstPlay(status);
+      if (status) {
+        setWaitingForAdmin(false);
+      } else {
+        setWaitingForAdmin(true);
+      }
+    });
+
     return () => {
       // Cleanup event listeners
       socket.off('initState');
@@ -322,6 +360,7 @@ const Player = ({ socket, videoId, isAdmin }) => {
     }
   }
 
+  // Enhanced the onPlayerStateChange function to be stricter
   function onPlayerStateChange(event) {
     if (!playerReady || !socket) return;
     
@@ -332,6 +371,17 @@ const Player = ({ socket, videoId, isAdmin }) => {
     
     const currentTime = playerRef.current.getCurrentTime();
     lastSyncTimeRef.current = Date.now();
+    
+    if (!isAdmin) {
+      // For non-admin users, ALWAYS check if admin has initiated playback before allowing play
+      if (event.data === 1 && !adminInitiatedPlayback) { // Trying to play
+        console.log('Cannot play until admin starts playback');
+        // Immediately pause the video
+        playerRef.current.pauseVideo();
+        setWaitingForAdmin(true);
+        return; // Important! Return early to prevent any other actions
+      }
+    }
     
     // Only allow admin to control playback for all users
     if (isAdmin) {
@@ -404,8 +454,8 @@ const Player = ({ socket, videoId, isAdmin }) => {
             `✓ In sync (${connectionQuality})`}
         </div>
         
-        {/* Only show waiting overlay when needed, remove the non-admin message */}
-        {!isAdmin && !adminInitiatedPlayback && (
+        {/* Only show waiting overlay when needed */}
+        {!isAdmin && waitingForAdmin && (
           <div className={styles.waitingOverlay}>
             <div className={styles.waitingMessage}>
               <div className={styles.waitingIcon}>⏳</div>

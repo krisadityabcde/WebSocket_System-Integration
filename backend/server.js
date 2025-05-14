@@ -88,6 +88,9 @@ let adminConnected = false;
 let lastBroadcastTime = Date.now();
 const SYNC_DEBOUNCE_TIME = 100; // Minimum time between broadcasts in milliseconds
 
+// Add a new state variable near the top where you keep track of state
+let adminInitiatedFirstPlay = false;
+
 // Authentication middleware
 app.post('/api/register', async (req, res) => {
   try {
@@ -295,8 +298,20 @@ io.use((socket, next) => {
     ...currentState,
     adminId: adminId,
     isAdmin: isAdmin,
-    queue: videoQueue
+    queue: videoQueue,
+    forceInitialSync: true, // Add this flag to force initial sync
+    adminInitiatedFirstPlay: adminInitiatedFirstPlay
   });
+  
+  // Then immediately force a pause state for non-admins
+  if (!isAdmin) {
+    socket.emit('videoPause', {
+      time: currentState.currentTime,
+      timestamp: Date.now(),
+      forcePause: true, // Add this flag to ensure client respects it
+      message: 'Waiting for admin to start playback'
+    });
+  }
   
   // Then send a refined sync after a short delay to ensure player is ready
   setTimeout(() => {
@@ -305,6 +320,15 @@ io.use((socket, next) => {
       queue: videoQueue
     });
   }, 200);
+  
+  // Reset playback for non-admins if admin hasn't initiated playback
+  if (!isAdmin && !adminInitiatedFirstPlay) {
+    socket.emit('forceInitialState', {
+      paused: true,
+      currentTime: 0,
+      message: 'Waiting for admin to start playback'
+    });
+  }
   
   // Handle username setting
   socket.on('setUsername', (username) => {
@@ -374,6 +398,12 @@ io.use((socket, next) => {
       });
       io.emit('videoPlayState', true);
       lastBroadcastTime = Date.now();
+      
+      // If this is the admin playing for the first time, set the flag
+      if (isAdmin && !adminInitiatedFirstPlay) {
+        adminInitiatedFirstPlay = true;
+        io.emit('adminInitiatedFirstPlay', true); // Notify all clients
+      }
     } 
     else {
       // Non-admin play events
@@ -498,6 +528,12 @@ io.use((socket, next) => {
     
     // Send notification about video change with title
     broadcastServerMessage(`${username} changed the video to: ${videoTitle}`);
+    
+    // Reset the flag when video changes
+    if (isAdmin) {
+      adminInitiatedFirstPlay = false;
+      io.emit('adminInitiatedFirstPlay', false);
+    }
   });
   
   // Handle adding to queue - allow anyone to add to queue
